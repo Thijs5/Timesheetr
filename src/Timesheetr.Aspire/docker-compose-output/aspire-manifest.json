@@ -1,0 +1,24 @@
+{
+  "resources": {
+    "docker-compose": {
+      "error": "This resource does not support generation in the manifest."
+    },
+    "rabbitmq-username": {
+      "type": "parameter.v0",
+      "value": "{rabbitmq-username.inputs.value}",
+      "inputs": {
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "rabbitmq-password": {
+      "type": "parameter.v0",
+      "value": "{rabbitmq-password.inputs.value}",
+      "inputs": {
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "messaging": {
