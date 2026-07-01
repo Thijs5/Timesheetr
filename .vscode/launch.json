@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Aspire AppHost",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-aspire",
+      "program": "${workspaceFolder}/src/Timesheetr.Aspire/bin/Debug/net10.0/Timesheetr.Aspire.dll",
+      "cwd": "${workspaceFolder}/src/Timesheetr.Aspire",
+      "console": "integratedTerminal",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:15090",
+        "ASPIRE_ALLOW_UNSECURED_TRANSPORT": "true",
+        "ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL": "http://localhost:19077",
+        "ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL": "http://localhost:20211"
+      }
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/Timesheetr.Api/Timesheetr.Api.csproj" />
+  <Project Path="src/Timesheetr.Aspire/Timesheetr.Aspire.csproj" />
+  <Project Path="tests/Timesheetr.FakeExternalApis/Timesheetr.FakeExternalApis.csproj" />
+  <Project Path="tests/Timesheetr.E2E/Timesheetr.E2E.csproj" />
+</Solution>
