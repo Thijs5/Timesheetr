@@ -84,7 +84,7 @@ export function MainLayout() {
         </div>
       </aside>
       <main className="flex-1 overflow-auto pt-14 md:pt-0">
-        <div className="p-8 max-w-6xl">
+        <div className="p-8 max-w-screen-2xl">
           <Outlet />
         </div>
       </main>

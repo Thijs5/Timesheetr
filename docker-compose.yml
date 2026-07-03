@@ -1,0 +1,58 @@
+services:
+  messaging:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./src/Timesheetr.Api
+    develop:
+      watch:
+        - action: rebuild
+          path: ./src/Timesheetr.Api
+          ignore:
+            - bin/
+            - obj/
+            - logs/
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DataPath: /app/data
+      ConnectionStrings__messaging: amqp://${RABBITMQ_USERNAME:-admin}:${RABBITMQ_PASSWORD:-admin}@messaging:5672
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "5000:8080"
+    depends_on:
+      messaging:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./src/Timesheetr.WebApp
+      args:
+        VITE_RABBITMQ_MANAGEMENT_URL: http://localhost:15672
+        VITE_RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-admin}
+        VITE_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-admin}
+    develop:
+      watch:
+        - action: rebuild
+          path: ./src/Timesheetr.WebApp
+          ignore:
+            - node_modules/
+            - dist/
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
