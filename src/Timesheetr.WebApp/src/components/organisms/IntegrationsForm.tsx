@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, Check } from 'lucide-react'
+import { Loader2, Check, Copy, Eye, EyeOff } from 'lucide-react'
 import { SiJira } from 'react-icons/si'
 import { TsButton } from '@/components/atoms/TsButton'
 import { TsInput } from '@/components/atoms/TsInput'
@@ -28,6 +28,8 @@ export function IntegrationsForm() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [visiblePasswords, setVisiblePasswords] = useState<Partial<Record<keyof SettingsFormState, boolean>>>({})
+  const [copiedField, setCopiedField] = useState<keyof SettingsFormState | null>(null)
 
   useEffect(() => {
     if (settings) {
@@ -53,16 +55,63 @@ export function IntegrationsForm() {
     }
   }
 
+  const togglePasswordVisibility = (key: keyof SettingsFormState) => {
+    setVisiblePasswords(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const copyFieldValue = async (key: keyof SettingsFormState) => {
+    const value = form[key]
+    if (!value) return
+
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopiedField(key)
+      setTimeout(() => setCopiedField(current => (current === key ? null : current)), 1500)
+    } catch {
+      setError('Failed to copy value to clipboard')
+    }
+  }
+
   const field = (key: keyof SettingsFormState, label: string, type = 'text', placeholder = '') => (
     <div className="space-y-1.5">
       <TsLabel htmlFor={key}>{label}</TsLabel>
-      <TsInput
-        id={key}
-        type={type}
-        value={form[key]}
-        placeholder={placeholder}
-        onChange={e => setForm(prev => ({ ...prev, [key]: e.target.value }))}
-      />
+      <div className="flex items-stretch">
+        <div className="relative flex-1">
+          <TsInput
+            id={key}
+            type={type === 'password' && visiblePasswords[key] ? 'text' : type}
+            value={form[key]}
+            placeholder={placeholder}
+            className={`rounded-r-none ${type === 'password' ? 'pr-10' : ''}`}
+            onChange={e => setForm(prev => ({ ...prev, [key]: e.target.value }))}
+          />
+          {type === 'password' && (
+            <TsButton
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
+              onClick={() => togglePasswordVisibility(key)}
+              aria-label={visiblePasswords[key] ? `Hide ${label}` : `Show ${label}`}
+              title={visiblePasswords[key] ? 'Hide value' : 'Show value'}
+            >
+              {visiblePasswords[key] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </TsButton>
+          )}
+        </div>
+        <TsButton
+          type="button"
+          variant="outline"
+          size="icon"
+          className="rounded-l-none border-l-0"
+          onClick={() => copyFieldValue(key)}
+          disabled={!form[key]}
+          aria-label={`Copy ${label}`}
+          title="Copy value"
+        >
+          {copiedField === key ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+        </TsButton>
+      </div>
     </div>
   )
 
