@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Loader2, RotateCcw, AlertTriangle, ChevronDown, ChevronRight, UploadCloud } from 'lucide-react'
 import { TsButton } from '@/components/atoms/TsButton'
-import { TsInput } from '@/components/atoms/TsInput'
 import { TsBadge } from '@/components/atoms/TsBadge'
 import { TsCard } from '@/components/atoms/TsCard'
 import { TsCheckbox } from '@/components/atoms/TsCheckbox'
@@ -23,6 +22,28 @@ function defaultFrom() {
 }
 function defaultTo() {
   return toIsoDate(new Date())
+}
+
+function formatTimeRange(startTime: string, durationSeconds: number): string {
+  const [hStr, mStr, sStr = '0'] = startTime.split(':')
+  const h = Number(hStr)
+  const m = Number(mStr)
+  const s = Number(sStr)
+
+  if ([h, m, s].some(Number.isNaN)) {
+    return `${startTime} - ?`
+  }
+
+  const startTotalSeconds = h * 3600 + m * 60 + s
+  const endTotalSeconds = (startTotalSeconds + durationSeconds) % (24 * 3600)
+
+  const toHHMM = (totalSeconds: number) => {
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+  }
+
+  return `${toHHMM(startTotalSeconds)} - ${toHHMM(endTotalSeconds)}`
 }
 
 export function EntryTable() {
@@ -256,6 +277,7 @@ export function EntryTable() {
                         </th>
                         <th className="w-28 px-3 py-2.5 text-left font-medium text-muted-foreground">Issue</th>
                         <th className="px-3 py-2.5 text-left font-medium text-muted-foreground">Description</th>
+                        <th className="w-28 px-3 py-2.5 text-right font-medium text-muted-foreground">Time</th>
                         <th className="w-20 px-3 py-2.5 text-right font-medium text-muted-foreground">Duration</th>
                         <th className="w-28 px-3 py-2.5 text-center font-medium text-muted-foreground">Status</th>
                       </tr>
@@ -265,6 +287,16 @@ export function EntryTable() {
                         const daySeconds = dayEntries.reduce((s, e) => s + e.durationSeconds, 0)
                         const dayLabel = formatHM(daySeconds)
                         const allSynced = dayEntries.every(e => e.status === 'Synced')
+                        const dayPendingEntries = dayEntries.filter(e => e.status !== 'Synced')
+                        const daySelectedCount = dayPendingEntries.filter(e => e.selected).length
+                        const dayChecked: boolean | 'indeterminate' =
+                          dayPendingEntries.length === 0
+                            ? false
+                            : daySelectedCount === 0
+                              ? false
+                              : daySelectedCount === dayPendingEntries.length
+                                ? true
+                                : 'indeterminate'
                         const isCollapsed = allSynced && !expandedDays.has(date)
                         return [
                           <tr
@@ -272,6 +304,17 @@ export function EntryTable() {
                             className="border-b bg-muted/20 cursor-pointer select-none"
                             onClick={() => toggleDay(date)}
                           >
+                            <td className="px-3 py-1.5" onClick={e => e.stopPropagation()}>
+                              <TsCheckbox
+                                checked={dayChecked}
+                                disabled={dayPendingEntries.length === 0}
+                                onCheckedChange={v =>
+                                  dayPendingEntries.forEach(entry =>
+                                    updateEntry(entry.togglId, { selected: v === true })
+                                  )
+                                }
+                              />
+                            </td>
                             <td colSpan={3} className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">
                               <span className="inline-flex items-center gap-1">
                                 {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -352,6 +395,8 @@ interface EntryRowProps {
 
 function EntryRow({ entry, onUpdate, onReset, onSync }: EntryRowProps) {
   const isSynced = entry.status === 'Synced'
+  const issueText = entry.issueKey || 'No issue key'
+  const descriptionText = entry.description || 'No description'
   return (
     <tr className={cn('border-b transition-colors', !entry.selected || isSynced ? 'opacity-60' : 'hover:bg-muted/30')}>
       <td className="px-3 py-2">
@@ -362,27 +407,18 @@ function EntryRow({ entry, onUpdate, onReset, onSync }: EntryRowProps) {
         />
       </td>
       <td className="px-3 py-2">
-        {isSynced ? (
-          <TsBadge variant="secondary">{entry.issueKey}</TsBadge>
-        ) : (
-          <TsInput
-            value={entry.issueKey}
-            onChange={e => onUpdate({ issueKey: e.target.value.toUpperCase() })}
-            placeholder="INSP-000"
-            className={cn('h-7 w-24 text-xs', !entry.hasValidIssueKey && entry.issueKey ? 'border-destructive' : '')}
-          />
-        )}
+        <TsBadge
+          variant="secondary"
+          className={cn(!entry.hasValidIssueKey && entry.issueKey ? 'text-destructive' : '')}
+        >
+          {issueText}
+        </TsBadge>
       </td>
       <td className="px-3 py-2">
-        {isSynced ? (
-          <span className="text-muted-foreground">{entry.description}</span>
-        ) : (
-          <TsInput
-            value={entry.description}
-            onChange={e => onUpdate({ description: e.target.value })}
-            className="h-7 text-xs max-w-md"
-          />
-        )}
+        <span className="text-muted-foreground">{descriptionText}</span>
+      </td>
+      <td className="px-3 py-2 tabular-nums text-muted-foreground text-right">
+        {formatTimeRange(entry.startTime, entry.durationSeconds)}
       </td>
       <td className="px-3 py-2 tabular-nums text-muted-foreground text-right">{entry.formattedDuration}</td>
       <td className="px-3 py-2">
